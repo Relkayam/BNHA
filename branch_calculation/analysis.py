@@ -1,7 +1,7 @@
 # analysis.py
 
 import pandas as pd
-from hydraulics import calculate_head_loss, calculate_velocity, calculate_reynolds_number
+from branch_calculation.hydraulics import calculate_head_loss, calculate_velocity, calculate_reynolds_number
 
 
 def analyze_network(network):

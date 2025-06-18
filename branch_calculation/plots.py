@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 from collections import defaultdict
 import math
-from cons import Constants
+from branch_calculation.cons import Constants
 
 
 def detect_branches(df_results, net):
@@ -22,6 +22,13 @@ def detect_branches(df_results, net):
     """
     print('Detecting branches...')
     # print(df_results.info())
+    system_data = net.system_data
+    df_source = pd.DataFrame(
+        {'Pipe_ID': 'Source', 'Start_Junction': 'Source', 'End_Junction': 'Source', 'Distance_m': 0,
+         'Elevation_m': system_data['reservoir_total_head'],
+         'Total_Head_m': system_data['reservoir_total_head'], 'Pressure_Head_m': system_data['reservoir_total_head'],
+         'Velocity_m_s': 0, 'Reynolds': 0, 'Diameter_mm': 0, 'Flow_L_s': 0}, index=[0])
+    df_results = pd.concat([df_source, df_results], ignore_index=True)
 
     leading_branches = net.get_terminal_branches()
     branches_path = net.get_branch_paths()
