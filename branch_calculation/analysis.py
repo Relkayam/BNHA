@@ -16,9 +16,10 @@ def analyze_network(network):
         df_results (DataFrame): Per-node hydraulic and geometric data.
         summary (dict): System-wide performance metrics.
     """
-
+    analysis_dict = {}
     # Extract data from the network instance
     pipes_dict, system_data = network.to_dict()
+
 
     reservoir_head = system_data['reservoir_total_head']
     reservoir_elevation = system_data['reservoir_elevation']
@@ -28,14 +29,14 @@ def analyze_network(network):
     # Map end_junc -> pipe_id for lookup
     node_table = {}
     for pid, pipe in pipes_dict.items():
-        node_table[pipe['end_junc']] = pid
+        node_table[pipe['End_Junction']] = pid
     # print(node_table, "node_table")
 
     # First, calculate hydraulic properties for all pipes
     for pid, pipe in pipes_dict.items():
-        head_loss = calculate_head_loss(pipe['length_m'], pipe['flow_cms'], pipe['hwc'], pipe['diameter_m'])
-        velocity = calculate_velocity(pipe['flow_cms'], pipe['diameter_m'])
-        reynolds = calculate_reynolds_number(pipe['flow_cms'], pipe['diameter_m'])
+        head_loss = calculate_head_loss(pipe['length_m'], pipe['flow_cms'], pipe['hwc'], pipe['Diameter_m'])
+        velocity = calculate_velocity(pipe['flow_cms'], pipe['Diameter_m'])
+        reynolds = calculate_reynolds_number(pipe['flow_cms'], pipe['Diameter_m'])
 
         # Store values in pipe dict
         pipe['head_loss'] = head_loss
@@ -80,23 +81,58 @@ def analyze_network(network):
         # Add result for this pipe
         pipe_data = pipes_dict[pipe_id]
         results.append({
+            # 'Pipe_ID': pipe_id,
+            # 'Start_Junction': pipe_data['Start_Junction'],
+            # 'End_Junction': pipe_data['End_Junction'],
+            # 'Distance_from_Source_m': distance,
+            # 'End_Junction_Elevation_m': pipe_data['End_Junction_Elevation_m'],
+            # 'Total_Head_m': total_head,
+            # 'Pressure_Head_m': total_head - pipe_data['End_Junction_Elevation_m'],
+            # 'Velocity_m_s': pipe_data['velocity'],
+            # 'Reynolds': pipe_data['reynolds'],
+            # 'Diameter_mm': pipe_data['Diameter_m'] * 1000,
+            # 'Flow_cms': pipe_data['flow_cms'],
+            # 'branch_end': pipe_data['branch_end'],
+            # 'end_junc_path': pipe_data['end_junc_path'],
+            # ##################################
+            'var_name': [None],
             'Pipe_ID': pipe_id,
-            'Start_Junction': pipe_data['start_junc'],
-            'End_Junction': pipe_data['end_junc'],
-            'Distance_m': distance,
-            'Elevation_m': pipe_data['end_junc_elevation'],
-            'Total_Head_m': total_head,
-            'Pressure_Head_m': total_head - pipe_data['end_junc_elevation'],
+            'Diameter_m': pipe_data['Diameter_m'],
+            'Diameter_mm': pipe_data['Diameter_m'] * 1000,
             'Velocity_m_s': pipe_data['velocity'],
             'Reynolds': pipe_data['reynolds'],
-            'Diameter_mm': pipe_data['diameter_m'] * 1000,
-            'Flow_L_s': pipe_data['flow_cms'] * 1000
+            'cost_USD_per_meter': [None],
+            'Start_Junction': pipe_data['Start_Junction'],
+            'End_Junction': pipe_data['End_Junction'],
+            'length_m': pipe_data['length_m'],
+            'cost_USD': [None],
+            'End_Junction_Elevation_m': pipe_data['End_Junction_Elevation_m'],
+            'static_head': total_head,
+            'Flow_cms': pipe_data['flow_cms'],
+            'flow_cmh': pipe_data['flow_cms'] * 3600,
+            'dz': [None],
+            'hwc': pipe_data['hwc'],
+            'end_junc_path': pipe_data['end_junc_path'],
+            'hydraulic_gradient_per_m': [None],
+            'headloss_per_m': [None],
+            'lp_vars': [None],
+            'Results': [None],
+            'pipe_updated': [None],
+            'headloss': [None],
+            'end_junc_path_updated': [None],
+            'branch_end': pipe_data['branch_end'],
+            'corrected_dz': [None],
+            'total_head_losses':  total_head - pipe_data['End_Junction_Elevation_m'],
+            'Total_Head_m': total_head,
+            'Pressure_Head_m': total_head - pipe_data['End_Junction_Elevation_m'],
+            'Distance_from_Source_m': distance
+
         })
 
     df_results = pd.DataFrame(results)
 
     # Aggregate system-level stats
-    summary = {
+    analysis_dict['summary'] = {
         'total_head_loss': reservoir_head - df_results['Total_Head_m'].min(),
         'min_pressure_head': df_results['Pressure_Head_m'].min(),
         'max_velocity': df_results['Velocity_m_s'].max(),
@@ -108,5 +144,29 @@ def analyze_network(network):
     # print(df_results.Distance_m)
     # print(df_results.info())
     # sort dataframe by Distance_m and reindex
-    df_results = df_results.sort_values(by='Distance_m').reset_index(drop=True)
-    return df_results, summary
+    analysis_dict['branches_end'] = df_results.loc[df_results.branch_end == 1, 'end_junc_path'].tolist()
+    # print(analysis_dict['branches_end'])
+    df_results['Distance_from_Source_m'] = 0.0
+
+    analysis_dict['results_branch'] = {}
+    for pid, full_path in zip(df_results['end_junc_path'], df_results['end_junc_path']):
+        # print(full_path)
+        path_pipes = full_path.split(',')
+        # print(path_pipes)
+        path_rows = df_results[df_results['Pipe_ID'].isin(path_pipes)].copy()
+        if full_path in analysis_dict['branches_end']:
+            # print(full_path)
+            for i, p in enumerate(path_pipes):
+                path_rows.loc[path_rows['Pipe_ID'] == p, 'sort_index'] = i + 1
+
+            path_rows.sort_values(by='sort_index', inplace=True)
+            path_rows['Distance_from_Source_m'] = path_rows['length_m'].cumsum()
+            analysis_dict['results_branch'][full_path] = path_rows
+            # print(path_rows[['Pipe_ID', 'Distance_from_Source_m']])
+            df_results.loc[path_rows.index, 'Distance_from_Source_m'] = path_rows['Distance_from_Source_m'].values
+
+    df_results.sort_values(by='Distance_from_Source_m').reset_index(drop=True)
+    analysis_dict['df_res'] = df_results
+    # print(df_results)
+    # exit()
+    return analysis_dict

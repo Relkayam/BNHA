@@ -19,3 +19,5 @@ class Constants:
     }
 
     SOURCE_NAME = "Source"
+
+    PRESSURE_TOL = 1  # Pressure tolerance

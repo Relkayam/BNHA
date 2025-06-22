@@ -9,6 +9,7 @@ class BranchNetwork:
     """
 
     def __init__(self):
+        self.sections_data = None
         self.pipes = {}           # Stores pipe data keyed by pipe ID
         self.system_data = {      # System-wide parameters
             'reservoir_elevation': None,
@@ -36,21 +37,34 @@ class BranchNetwork:
         Expects columns: pipe, diameter_m, start_junc, end_junc, length_m, flow_cmh,
                         end_junc_elevation, static_head, hwc, branch_end, end_junc_path
         """
+        df['flow_cms'] = df['flow_cmh'] / 3600
+        df['dz'] = df['static_head'] - df['End_Junction_Elevation_m']
+        df['hydraulic_gradient_per_m'] = df['dz'] / df['length_m']
+
+        self.sections_data = df.copy()
         for _, row in df.iterrows():
-            pipe_id = row['pipe']
+            pipe_id = row['Pipe_ID']
             self.pipes[pipe_id] = {
-                'diameter_m': row['diameter_m'],
-                'start_junc': row['start_junc'],
-                'end_junc': row['end_junc'],
+                'Diameter_m': row['Diameter_m'],
+                'Start_Junction': row['Start_Junction'],
+                'End_Junction': row['End_Junction'],
                 'length_m': row['length_m'],
-                'flow_cms': row['flow_cmh'] / 3600,
-                'end_junc_elevation': row['end_junc_elevation'],
+                'flow_cms': row['flow_cms'],
+                'End_Junction_Elevation_m': row['End_Junction_Elevation_m'],
                 'static_head': row['static_head'],
                 'hwc': row['hwc'],
-                'branch_end': bool(row['branch_end'])
+                'branch_end': row['branch_end'],
+                'end_junc_path': row['end_junc_path'],
+                'pipe_updated': None,
+                'headloss': None,
+                'end_junc_path_updated': None,
+
+
             }
-            self.nodes.add(row['start_junc'])
-            self.nodes.add(row['end_junc'])
+
+
+            self.nodes.add(row['Start_Junction'])
+            self.nodes.add(row['End_Junction'])
             self.paths[pipe_id] = row['end_junc_path'].split(',')
 
     def to_dict(self):
@@ -95,13 +109,12 @@ class BranchNetwork:
         return len(self.get_terminal_branches())
 
 
-
 if __name__ == "__main__":
     # Example usage
     import os
     project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     df = pd.read_csv(os.path.join(project_path, 'network_tree_template.csv'))
-    print(df)
+    # print(df)
     network = BranchNetwork()
     network.load_from_dataframe(df)
     network.set_system_data(reservoir_elevation=100, reservoir_total_head=120)
