@@ -242,19 +242,11 @@ def full_section_optimal_diameter(net, df_pipe_prices, minimum_pressure_constrai
 
     df_res['branch_end'] = 0
     result['branches_end'] = df_sections_data.loc[df_sections_data['branch_end'] == 1, 'end_junc_path'].tolist()
-    # print(result['branches_end'])
-    # exit()
-    # branch_end_pipes = df_sections_data.loc[df_sections_data['branch_end'] == 1, 'Pipe_ID'].unique()
 
-    # for p_in in branch_end_pipes:
-    #     temp = df_res.loc[df_res['Pipe_ID'] == p_in]
-        # if len(temp) > 0:
-        # print(df_res)
-        # df_res.loc[temp.index[-1], 'branch_end'] = 1
-
-        # Create dataframes for each path
-    # branch_end_dataframes = create_branch_end_dataframes(df_res)
     df_res['pipe_updated'] = df_res['Pipe_ID']
+    df_res['flow_cms'] = df_res['flow_cmh'] / 3600
+    df_res['Velocity_m_s'] = df_res['flow_cms'] / (df_res['Diameter_m'] ** 2 * np.pi / 4)
+    df_res['Diameter_mm'] = df_res['Diameter_m'] / 1000
 
     df_res['Distance_from_Source_m'] = 0.0
     result['results_branch'] = {}
@@ -289,6 +281,9 @@ def full_section_optimal_diameter(net, df_pipe_prices, minimum_pressure_constrai
     df_res['pipe_updated'] = df_res['Pipe_ID']
 
     result['df_res'] = df_res
+
+    result['pipes_summery'] = df_res[['Pipe_ID', 'Diameter_mm', 'Velocity_m_s', 'length_m', 'flow_cmh', 'headloss']]
+
 
 
     return result
@@ -378,43 +373,17 @@ def classic_optimal_diameter_optimization(net, df_pipe_prices, minimum_pressure_
         df_res.loc[temp.index, 'branch_end'] = 1
 
     result['branches_end'] = df_res.loc[df_res.branch_end == 1, 'updated_path'].tolist()
-    # print(df_res[['pipe_updated','end_junc_path', 'updated_path', 'original_pipe_id', 'branch_end']])
-    # exit()
+
 
     df_res['headloss'] = df_res['Results'] * df_res['headloss_per_m']
-
-    # update the end junction path according to the pipe segment optimization results
-    # df_res['end_junc_path_updated'] = df_res['updated_path']
-
-    # for i, row in df_res.iterrows():
-    #     if not row['Pipe_ID'] == row['pipe_updated']:
-    #         temp = df_res.loc[df_res['pipe_updated'] != row['Pipe_ID']].copy()
-    #
-    #         search_string = row['Pipe_ID']
-    #         replacement_string = ""
-    #         for p in df_res.loc[df_res['Pipe_ID'] == row['Pipe_ID'], 'pipe_updated'].values:
-    #             replacement_string += p + ','
-    #         replacement_string = replacement_string[:-1]
-    #         for i, row in temp.iterrows():
-    #             path = str(row['end_junc_path'])
-    #             if search_string in path:
-    #                 temp.loc[i, 'end_junc_path_updated'] = path.replace(search_string, replacement_string)
-    #
-    #         df_res.loc[temp.index, 'end_junc_path_updated'] = temp.loc[temp.index, 'end_junc_path_updated']
-    #
-    #
-    # df_res['branch_end'] = 0
-    # branch_end_pipes = df_sections_data.loc[df_sections_data['branch_end'] == 1, 'Pipe_ID'].unique()
-    # for p_in in branch_end_pipes:
-    #     temp = df_res.loc[df_res['Pipe_ID'] == p_in]
-    #     df_res.loc[temp.index[-1], 'branch_end'] = 1
-
-    # df_res['Pipe_ID'] = df_res['pipe_updated']
 
     # correct the dz and headloss values
     df_res['corrected_dz'] = df_res['hydraulic_gradient_per_m'] * df_res['Results']
 
     df_res['updated_path'] = df_res['updated_path'].astype('str')
+
+    df_res['Diameter_mm'] = df_res['Diameter_m'] / 1000
+    df_res['flow_cms'] = df_res['flow_cmh'] / 3600
 
     for path in df_res['updated_path'].unique():
         path_df = df_res[df_res['updated_path'] == path]
@@ -447,6 +416,7 @@ def classic_optimal_diameter_optimization(net, df_pipe_prices, minimum_pressure_
 
     # Create dataframes for each path
     # branch_end_dataframes = create_branch_end_dataframes(df_res)
+    df_res['Velocity_m_s'] = df_res['flow_cms'] / (df_res['Diameter_m'] ** 2 * np.pi / 4)
 
     df_res['Distance_from_Source_m'] = 0.0
 
@@ -466,10 +436,7 @@ def classic_optimal_diameter_optimization(net, df_pipe_prices, minimum_pressure_
 
 
     result['df_res'] = df_res
-    # print(df_res[['pipe_updated', 'Results', 'Distance_from_Source_m']])
-    # print(result['results_branch'].keys())
-    # print(result['branches_end'])
-    # # exit()
+    result['pipes_summery'] = df_res[['Pipe_ID', 'Diameter_mm', 'Velocity_m_s', 'length_m', 'flow_cmh', 'headloss']]
 
     return result
 

@@ -167,6 +167,6 @@ def analyze_network(network):
 
     df_results.sort_values(by='Distance_from_Source_m').reset_index(drop=True)
     analysis_dict['df_res'] = df_results
-    # print(df_results)
-    # exit()
+    analysis_dict['pipes_summery'] = df_results[['Pipe_ID', 'Diameter_mm', 'Velocity_m_s', 'length_m', 'flow_cmh', 'headloss']]
+
     return analysis_dict
