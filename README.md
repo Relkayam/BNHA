@@ -26,10 +26,10 @@ Designed for civil engineers, hydraulic modelers, and researchers, the package p
 
 ## 📦 Installation
 
-Install from a local `.whl` file (from GitHub releases or build):
+Install using pip:
 
 ```bash
-pip install ./branch_network_hydraulics-0.1.0-py3-none-any.whl
+pip install branch-network-hydraulics
 
 
  Usage
